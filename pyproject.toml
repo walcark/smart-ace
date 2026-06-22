@@ -10,7 +10,21 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [tool.ruff]
-line-length = 100
+fix = true
+line-length = 79
+indent-width = 4
+exclude = ["tests/*", "docs/*", "scripts/*", "test.py", "notebooks/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "D"]
+fixable = ["ALL"]
+unfixable = []
+pydocstyle = { convention = "numpy" }
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
@@ -24,3 +38,5 @@ python = "3.12.*"
 pydantic = ">=2.13.4,<3"
 numpy = ">=2.4.6,<3"
 matplotlib = ">=3.11.0,<4"
+smartg = ">=1.2.0"
+luts = ">=1.0.6,<2"
