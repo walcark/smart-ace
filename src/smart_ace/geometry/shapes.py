@@ -16,10 +16,16 @@ class Box(BaseModel):
     """A box with finite extents along all axes."""
 
     shape: Literal["box"] = "box"
-    dx: float = Field(default=10.0, gt=0, description="Cloud size along the x-axis [km]")
-    dy: float = Field(default=10.0, gt=0, description="Cloud size along the y-axis [km]")
+    dx: float = Field(
+        default=10.0, gt=0, description="Cloud size along the x-axis [km]"
+    )
+    dy: float = Field(
+        default=10.0, gt=0, description="Cloud size along the y-axis [km]"
+    )
     dz: float = Field(default=1.0, gt=0, description="Cloud thickness [km]")
-    zmin: float = Field(default=1.0, ge=0, description="Bottom elevation of the box [km]")
+    zmin: float = Field(
+        default=1.0, ge=0, description="Bottom elevation of the box [km]"
+    )
 
 
 class InfXBox(Box):
@@ -35,9 +41,13 @@ class InfXBox(Box):
 
 
 class Sphere(BaseModel):
+    """A sphere defined by its radius and bottom elevation."""
+
     shape: Literal["sphere"] = "sphere"
     radius: float = Field(default=10.0, gt=0, description="Sphere radius [km]")
-    zmin: float = Field(default=1.0, ge=0, description="Bottom elevation of the sphere [km]")
+    zmin: float = Field(
+        default=1.0, ge=0, description="Bottom elevation of the sphere [km]"
+    )
 
 
 class Spheroid(BaseModel):
@@ -52,9 +62,15 @@ class Spheroid(BaseModel):
     """
 
     shape: Literal["prolate", "oblate"]
-    major: float = Field(default=10.0, gt=0, description="Larger semi-axis [km]")
-    minor: float = Field(default=5.0, gt=0, description="Smaller semi-axis [km]")
-    zmin: float = Field(default=1.0, ge=0, description="Bottom elevation of the spheroid [km]")
+    major: float = Field(
+        default=10.0, gt=0, description="Larger semi-axis [km]"
+    )
+    minor: float = Field(
+        default=5.0, gt=0, description="Smaller semi-axis [km]"
+    )
+    zmin: float = Field(
+        default=1.0, ge=0, description="Bottom elevation of the spheroid [km]"
+    )
 
     @model_validator(mode="after")
     def _check_axes(self) -> "Spheroid":
@@ -73,7 +89,7 @@ Domain = Box
 
 
 def _semi_axes(shape: Sphere | Spheroid) -> tuple[float, float]:
-    """Return the (horizontal, vertical) semi-axes [km] of an ellipsoidal shape.
+    """Return the (horizontal, vertical) semi-axes [km] of an ellipsoid.
 
     The axis of revolution is vertical: for a prolate spheroid it is the major
     axis, for an oblate one the minor axis. A sphere is the isotropic case.
@@ -88,18 +104,21 @@ def _semi_axes(shape: Sphere | Spheroid) -> tuple[float, float]:
 def shape_bbox(shape: Shape) -> Box:
     """Axis-aligned bounding box of a shape, whatever its kind.
 
-    The bounding box of a shape is itself a :class:`Box` (a shape), so this maps
-    any shape onto the box geometry that encloses it.
+    The bounding box of a shape is itself a :class:`Box` (a shape), so this
+    maps any shape onto the box geometry that encloses it.
     """
-
-    # `Box` also covers `InfXBox` (a Box with an infinite x-extent). Normalise to
-    # a plain Box so callers never have to deal with the subclass.
+    # `Box` also covers `InfXBox` (a Box with an infinite x-extent). Normalise
+    # to a plain Box so callers never have to deal with the subclass.
     if isinstance(shape, Box):
         return Box(dx=shape.dx, dy=shape.dy, dz=shape.dz, zmin=shape.zmin)
 
     if isinstance(shape, (Sphere, Spheroid)):
         horizontal, vertical = _semi_axes(shape)
-        return Box(dx=2 * horizontal, dy=2 * horizontal, dz=2 * vertical, zmin=shape.zmin)
+        return Box(
+            dx=2 * horizontal,
+            dy=2 * horizontal,
+            dz=2 * vertical,
+            zmin=shape.zmin,
+        )
 
     assert_never(shape)
-

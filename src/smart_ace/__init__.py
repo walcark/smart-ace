@@ -1,4 +1,4 @@
-"""Cloud-adjacency simulation library: geometry → atmosphere → observables → run.
+"""Cloud-adjacency simulation: geometry → atmosphere → observables → run.
 
 The headline classes are re-exported here for convenience. Importing this
 package stays light (matplotlib and SMART-G are imported lazily, only when

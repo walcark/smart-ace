@@ -23,7 +23,7 @@ class Atmosphere:
     atmo: AtmoParams
 
     def key(self) -> str:
-        """Stable short hash of the atmosphere (geometry + optics + profile)."""
+        """Stable short hash (geometry + optics + profile)."""
         return stable_hash(
             {
                 "geometry": self.geometry.key(),
@@ -33,7 +33,7 @@ class Atmosphere:
         )
 
     def build(self) -> Any:
-        """Assemble and return the calculated SMART-G ``AtmAFGL`` (needs smartg)."""
+        """Assemble the calculated SMART-G ``AtmAFGL`` (needs smartg)."""
         from .build import build_atmafgl
 
         return build_atmafgl(self.geometry, self.cloud, self.atmo)

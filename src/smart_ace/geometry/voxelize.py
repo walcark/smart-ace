@@ -18,8 +18,10 @@ from numpy.typing import NDArray
 from .shapes import Box, Domain, Shape, _semi_axes, shape_bbox
 
 
-def _resolution(cloud_shape: Shape, n: int | tuple[int, int, int]) -> tuple[int, int, int]:
-    """A box is always a single voxel; otherwise normalise `n` to a triplet."""
+def _resolution(
+    cloud_shape: Shape, n: int | tuple[int, int, int]
+) -> tuple[int, int, int]:
+    """Normalise `n` to a triplet (a box is always a single voxel)."""
     if isinstance(cloud_shape, Box):
         return (1, 1, 1)
     if isinstance(n, int):
@@ -34,10 +36,11 @@ def _axis_interval(
 
     Output shape is as followed: (xmin, xmax), (ymin, ymax), (zmin, zmax)
 
-    The cloud is centred horizontally on (0, 0). The vertical span is ``[zmin, zmin + dz]``.
-    Infinite extents (e.g. ``InfXBox``) are clipped to the domain (a cloud that fills a whole
-    period is, with periodic boundaries, effectively infinite). A *finite* extent sticking out
-    of the domain is an error.
+    The cloud is centred horizontally on (0, 0). The vertical span is
+    ``[zmin, zmin + dz]``. Infinite extents (e.g. ``InfXBox``) are clipped to
+    the domain (a cloud that fills a whole period is, with periodic boundaries,
+    effectively infinite). A *finite* extent sticking out of the domain is an
+    error.
     """
     cb = shape_bbox(cloud_shape)
     cloud = (
@@ -54,7 +57,9 @@ def _axis_interval(
     out: list[tuple[float, float]] = []
     tol = 1e-9
     for name, (c_lo, c_hi), (d_lo, d_hi) in zip("xyz", cloud, dom):
-        if not np.isfinite([c_lo, c_hi]).all():  # infinite extent -> fill domain
+        if not np.isfinite(
+            [c_lo, c_hi]
+        ).all():  # infinite extent -> fill domain
             out.append((d_lo, d_hi))
             continue
         if c_lo < d_lo - tol or c_hi > d_hi + tol:
@@ -69,11 +74,13 @@ def _axis_interval(
 def _axis_grid(
     interval: tuple[float, float], domain: tuple[float, float], n: int
 ) -> tuple[NDArray[np.float64], int]:
-    """Edges along one axis: an optional border cell, `n` cells over `interval`, an optional
-    border cell, up to the `domain` bounds.
+    """Build the cell edges along one axis up to the `domain` bounds.
 
-    Returns the edges and the number of leading border cells (0 or 1), used to offset the cloud
-    cell indices.
+    The layout is an optional border cell, `n` cells over `interval`, then an
+    optional border cell.
+
+    Returns the edges and the number of leading border cells (0 or 1), used to
+    offset the cloud cell indices.
     """
     c_lo, c_hi = interval
     d_lo, d_hi = domain
@@ -85,11 +92,14 @@ def _axis_grid(
     return edges, len(left)
 
 
-def _clamped_sq(grid: NDArray[np.float64], center: float, semi: float) -> NDArray[np.float64]:
+def _clamped_sq(
+    grid: NDArray[np.float64], center: float, semi: float
+) -> NDArray[np.float64]:
     """Squared scaled distance from `center` to each voxel interval of `grid`.
 
-    For every cell ``[grid[i], grid[i+1]]`` returns ``(d / semi) ** 2`` where ``d`` is the distance
-    from `center` to the closest point of the cell (0 when the centre falls inside the cell).
+    For every cell ``[grid[i], grid[i+1]]`` returns ``(d / semi) ** 2`` where
+    ``d`` is the distance from `center` to the closest point of the cell
+    (0 when the centre falls inside the cell).
     """
     lo = (grid[:-1] - center) / semi
     hi = (grid[1:] - center) / semi
@@ -101,13 +111,18 @@ def grid_and_indexes(
     cloud_shape: Shape,
     domain: Domain,
     n: int | tuple[int, int, int] = 1,
-) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.int32]]:
+) -> tuple[
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.int32],
+]:
     """Build the ideal 3D grid over `domain` and the cloud voxel indices.
 
-    The grid spans the whole (periodic) domain: the cloud is resolved with ``n``
-    cells per axis, surrounded by single large border cells filling the rest of
-    the domain. This keeps the number of cloud voxels minimal (the efficient
-    ``[0, 3, 4, 7]`` layout of the IPRT examples).
+    The grid spans the whole (periodic) domain: the cloud is resolved with
+    ``n`` cells per axis, surrounded by single large border cells filling the
+    rest of the domain. This keeps the number of cloud voxels minimal (the
+    efficient ``[0, 3, 4, 7]`` layout of the IPRT examples).
 
     Parameters
     ----------
@@ -128,8 +143,8 @@ def grid_and_indexes(
         ``(N, 3)`` int32 array of the cloud voxels in the **1-based IPRT
         convention** expected by SMART-G.
 
-    A voxel is flagged as cloud as soon as it *overlaps* the shape (conservative:
-    no cloud leaks out of the grid).
+    A voxel is flagged as cloud as soon as it *overlaps* the shape
+    (conservative: no cloud leaks out of the grid).
     """
     ix, iy, iz = _axis_interval(cloud_shape, domain)
     dx_dom = (-domain.dx / 2, domain.dx / 2)
@@ -149,8 +164,8 @@ def grid_and_indexes(
         # Every inner cell is cloud; here that is the single (0, 0, 0) voxel.
         inner_idx = np.array([[0, 0, 0]], dtype=np.int64)
     else:
-        # Voxel/ellipsoid overlap on the inner (cloud-resolving) edges: scale each
-        # axis so the ellipsoid becomes the unit sphere (the AABB stays an AABB),
+        # Voxel/ellipsoid overlap on the inner (cloud-resolving) edges: scale
+        # each axis so the ellipsoid becomes the unit sphere (AABB stays AABB),
         # then keep voxels whose closest point to the centre is within unit
         # distance. Per-axis squared clamped distances combine by broadcasting.
         horizontal, vertical = _semi_axes(cloud_shape)
@@ -161,9 +176,12 @@ def grid_and_indexes(
         qx2 = _clamped_sq(inner_x, 0.0, horizontal)
         qy2 = _clamped_sq(inner_y, 0.0, horizontal)
         qz2 = _clamped_sq(inner_z, zc, vertical)
-        inside = (qx2[:, None, None] + qy2[None, :, None] + qz2[None, None, :]) <= 1.0
+        inside = (
+            qx2[:, None, None] + qy2[None, :, None] + qz2[None, None, :]
+        ) <= 1.0
         inner_idx = np.argwhere(inside)
 
-    # Shift inner (0-based) indices by the leading border cells, then to IPRT 1-based.
+    # Shift inner (0-based) indices by the leading border cells, then to IPRT
+    # 1-based.
     cell_indices = (inner_idx + np.array([ox, oy, oz]) + 1).astype(np.int32)
     return xgrid, ygrid, zgrid, cell_indices

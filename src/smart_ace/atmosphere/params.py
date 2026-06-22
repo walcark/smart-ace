@@ -25,7 +25,7 @@ class CloudOptics:
     species:
         SMART-G cloud species key (``"wc"`` = water cloud).
     trunc:
-        Phase-function truncation (smartg ``GT_trunc``); ``None`` = no truncation.
+        Phase-function truncation (smartg ``GT_trunc``); ``None`` = none.
     """
 
     kext: float
@@ -48,7 +48,7 @@ class AtmoParams:
     surface_pressure:
         Surface pressure in hPa; ``None`` keeps the profile's own value.
     toa_alt:
-        Top-of-atmosphere altitude in km; the vertical grid is extended up to it.
+        Top-of-atmosphere altitude in km; the vertical grid extends up to it.
     nth:
         Number of angles used to discretise the phase functions.
     """

@@ -1,7 +1,7 @@
 """3D rendering of a cloud :class:`~typer_cli.geometry.grid.Geometry`.
 
 Each cloud voxel is drawn at its true physical position/size, with the full
-domain shown as a dashed wireframe so the cloud is seen in its real final space.
+domain shown as a dashed wireframe so the cloud is seen in its real space.
 """
 
 import numpy as np

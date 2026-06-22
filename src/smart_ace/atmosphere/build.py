@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 def build_grid3d(geometry: "Geometry", toa_alt: float) -> Any:
-    """Wrap the geometry edges in a periodic SMART-G ``Grid3D`` up to ``toa_alt``."""
+    """Wrap the geometry edges in a periodic ``Grid3D`` up to ``toa_alt``."""
     from smartg.libATM3D import Grid3D
 
     return Grid3D(
@@ -31,8 +31,10 @@ def build_grid3d(geometry: "Geometry", toa_alt: float) -> Any:
     )
 
 
-def build_cloud3d(geometry: "Geometry", grid3: Any, optics: CloudOptics) -> Any:
-    """Build the SMART-G ``Cloud3D`` from the geometry voxel indices and optics."""
+def build_cloud3d(
+    geometry: "Geometry", grid3: Any, optics: CloudOptics
+) -> Any:
+    """Build the ``Cloud3D`` from the geometry voxel indices and optics."""
     from smartg.libATM3D import Cloud3D
 
     n = geometry.n_cloud_voxels
@@ -46,7 +48,9 @@ def build_cloud3d(geometry: "Geometry", grid3: Any, optics: CloudOptics) -> Any:
     )
 
 
-def build_atm3d(geometry: "Geometry", optics: CloudOptics, atmo: AtmoParams) -> Any:
+def build_atm3d(
+    geometry: "Geometry", optics: CloudOptics, atmo: AtmoParams
+) -> Any:
     """Combine the 1D atmosphere and the 3D cloud into a SMART-G ``Atm3D``."""
     from smartg.libATM3D import Atm3D
 
@@ -64,7 +68,9 @@ def build_atm3d(geometry: "Geometry", optics: CloudOptics, atmo: AtmoParams) -> 
     )
 
 
-def build_atmafgl(geometry: "Geometry", optics: CloudOptics, atmo: AtmoParams) -> Any:
+def build_atmafgl(
+    geometry: "Geometry", optics: CloudOptics, atmo: AtmoParams
+) -> Any:
     """Build the calculated 3D ``AtmAFGL`` profile ready for a SMART-G run."""
     from smartg.libATM3D import AtmAFGL
 

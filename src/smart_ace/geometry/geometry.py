@@ -1,4 +1,4 @@
-"""The Geometry: a self-contained cloud voxelisation inside a periodic domain."""
+"""The Geometry: a cloud voxelisation inside a periodic domain."""
 
 from __future__ import annotations
 
@@ -33,12 +33,15 @@ class Geometry:
 
     @classmethod
     def build(
-        cls, cloud_shape: Shape, domain: Domain, n: int | tuple[int, int, int] = 1
+        cls,
+        cloud_shape: Shape,
+        domain: Domain,
+        n: int | tuple[int, int, int] = 1,
     ) -> "Geometry":
         """Voxelise `cloud_shape` inside `domain` at resolution `n`."""
         xg, yg, zg, ci = grid_and_indexes(cloud_shape, domain, n)
-        # Store the normalised resolution (a box collapses to a single voxel) so
-        # identical boxes hash the same regardless of the requested resolution.
+        # Store the normalised resolution (a box collapses to a single voxel)
+        # so identical boxes hash the same regardless of the requested value.
         triplet = _resolution(cloud_shape, n)
         return cls(cloud_shape, domain, triplet, xg, yg, zg, ci)
 
@@ -65,7 +68,7 @@ class Geometry:
         return m
 
     def key(self) -> str:
-        """Stable short hash of the geometry inputs (for the database cache)."""
+        """Stable short hash of the geometry inputs (for the DB cache)."""
         return stable_hash(
             {
                 "shape": self.shape.model_dump(),
@@ -75,7 +78,7 @@ class Geometry:
         )
 
     def show(self, ax=None) -> None:
-        """Render the geometry in its full domain (see :func:`plot.plot_geometry`)."""
+        """Render the geometry in its domain (see :func:`plot_geometry`)."""
         from .plot import plot_geometry
 
         return plot_geometry(self, ax=ax)
