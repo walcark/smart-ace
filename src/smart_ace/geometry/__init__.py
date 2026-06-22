@@ -1,21 +1,22 @@
-"""Parameter models for SMART-ACE.
+"""Cloud geometry: shapes, voxelisation into a periodic domain, and rendering.
 
-``GROUPS`` is the single registry the CLI consumes: it maps each result-dict
-key to its Pydantic model. Adding a parameter group = adding a model here; the
-CLI derives its options and instantiation generically (see ``smart_ace.cli``).
+Depends on numpy/pydantic/matplotlib only (no SMART-G).
 """
 
-from pydantic import BaseModel
+from .geometry import Geometry
+from .plot import plot_geometry
+from .shapes import Box, Domain, InfXBox, Shape, Sphere, Spheroid, shape_bbox
+from .voxelize import grid_and_indexes
 
-from smart_ace.params.cloud import CloudParams
-from smart_ace.params.grid import GridParams
-from smart_ace.params.simu import SimuParams
-
-# Result-dict key -> its model. Order also defines CLI option order.
-GROUPS: dict[str, type[BaseModel]] = {
-    "cloud": CloudParams,
-    "grid": GridParams,
-    "simu": SimuParams,
-}
-
-__all__ = ["GROUPS", "CloudParams", "GridParams", "SimuParams"]
+__all__ = [
+    "Box",
+    "InfXBox",
+    "Sphere",
+    "Spheroid",
+    "Shape",
+    "Domain",
+    "Geometry",
+    "shape_bbox",
+    "grid_and_indexes",
+    "plot_geometry",
+]
