@@ -9,7 +9,6 @@ The modes are a discriminated union on ``mode``:
 from typing import Annotated, Literal
 
 import numpy as np
-
 from pydantic import BaseModel, Field
 
 
@@ -53,14 +52,13 @@ Layout = Annotated[Map | Transect, Field(discriminator="mode")]
 
 def positions(layout: Layout) -> tuple[np.ndarray, np.ndarray]:
     """Return the (x, y) positions of the sensors."""
-    
     res = layout.res
     n = layout.n
-    
-    half = n*res/2
-    x: np.ndarray = - half + res/2 + np.arange(n) * res
-    y: np.ndarray = - half + res/2 + np.arange(n) * res
-    
+
+    half = n * res / 2
+    x: np.ndarray = -half + res / 2 + np.arange(n) * res
+    y: np.ndarray = -half + res / 2 + np.arange(n) * res
+
     if isinstance(layout, Transect):
         if layout.axis == "x":
             y = np.zeros((1))
@@ -68,5 +66,5 @@ def positions(layout: Layout) -> tuple[np.ndarray, np.ndarray]:
             x = np.zeros((1))
 
     xx, yy = np.meshgrid(x, y)
-    
+
     return xx, yy
