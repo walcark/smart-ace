@@ -138,6 +138,11 @@ class Observable:
         Local-estimate (solar) direction, ``{"th_deg": 0., "phi_deg": 0.}``.
     NBPHOTONS:
         Number of photons for the run.
+    direct:
+        Include the directly transmitted (unscattered) beam. SMART-G drops it
+        by default; it is essential for a ground flux (which is dominated by
+        the direct solar beam) and harmless for a nadir radiance (no direct
+        sun-to-sensor path), so the default here is ``True``.
     """
 
     atmosphere: Atmosphere
@@ -146,6 +151,7 @@ class Observable:
     surf: Any = None
     le: Any = None
     NBPHOTONS: float = 1e7
+    direct: bool = True
 
     def run(self, S: Any) -> Result:
         """Place the sensors, run SMART-G and pack the output into a Result.
@@ -168,6 +174,7 @@ class Observable:
             sensor=sensors,
             le=self.le,
             NBPHOTONS=self.NBPHOTONS,
+            DIRECT=self.direct,
         )
 
         arr = np.asarray(mlut[quantity][:, 0, 0], dtype=float)
