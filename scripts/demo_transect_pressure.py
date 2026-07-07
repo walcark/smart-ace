@@ -11,18 +11,17 @@ import matplotlib.pyplot as plt
 from smartg.smartg import Albedo_cst, LambSurface, Smartg
 
 from smart_ace.atmosphere import AtmoParams, Atmosphere, CloudOptics
-from smart_ace.geometry import Domain, Geometry, Spheroid
+from smart_ace.geometry import Domain, Geometry, Box
 from smart_ace.observables import Observable, SensorParams, Study, Transect
 
 
 def main() -> None:
     wl = 560.0
-    pressures = [900.0, 1000.0, 1013.0, 1100.0]  # hPa
+    pressures = [500.0, 1000.0, 3000.0]
 
     geo = Geometry.build(
-        cloud_shape=Spheroid(shape="oblate", major=4, minor=1),
+        cloud_shape=Box(dx=5, dy=5),
         domain=Domain(dx=30, dy=30, dz=100, zmin=0),
-        n=(10, 10, 5),
     )
     opt = CloudOptics(kext=10.0, reff=10.0)
     layout = Transect(res=0.5, axis="x", n=40)
@@ -40,10 +39,10 @@ def main() -> None:
             Observable(
                 atmosphere=atm,
                 layout=layout,
-                sensor=SensorParams(quantity="radiance", loc="toa"),
-                surf=LambSurface(ALB=Albedo_cst(0.2)),
+                sensor=SensorParams(quantity="radiance", loc="toa", thdeg=180.0, phdeg=0.0),
+                surf=LambSurface(ALB=Albedo_cst(0.0)),
                 le={"th_deg": 0.0, "phi_deg": 0.0},
-                NBPHOTONS=1e7,
+                NBPHOTONS=1e8,
             ),
         )
 
