@@ -139,10 +139,12 @@ class Observable:
     NBPHOTONS:
         Number of photons for the run.
     direct:
-        Include the directly transmitted (unscattered) beam. SMART-G drops it
-        by default; it is essential for a ground flux (which is dominated by
-        the direct solar beam) and harmless for a nadir radiance (no direct
-        sun-to-sensor path), so the default here is ``True``.
+        For a ``"flux"`` sensor, add the direct (unscattered) solar beam to the
+        diffuse flux returned by the run. A backward local-estimate run only
+        yields the diffuse part (the direct beam is never counted under ``le``,
+        and SMART-G's ``DIRECT`` flag is a no-op in that mode), so the direct
+        horizontal irradiance is reconstructed from the per-sensor direct
+        transmittance in the MLUT. Ignored for a ``"radiance"`` sensor.
     """
 
     atmosphere: Atmosphere
@@ -174,10 +176,11 @@ class Observable:
             sensor=sensors,
             le=self.le,
             NBPHOTONS=self.NBPHOTONS,
-            DIRECT=self.direct,
         )
 
         arr = np.asarray(mlut[quantity][:, 0, 0], dtype=float)
+        if self.direct and self.sensor.quantity == "flux":
+            arr = arr + self._direct_flux(mlut)
         xx, yy = positions(self.layout)
 
         if isinstance(self.layout, Transect):
@@ -192,6 +195,30 @@ class Observable:
 
         values = arr.reshape(shape)
         return Result(quantity, values, (xx[0, :], yy[:, 0]), is_map=True)
+
+    def _direct_flux(self, mlut: Any) -> np.ndarray:
+        """Per-sensor direct-beam downwelling flux, missing from the le run.
+
+        A backward local-estimate run yields only the *diffuse* flux; the
+        unscattered direct beam is never counted under ``le``. SMART-G still
+        exposes the per-sensor direct transmittance along the sun path in the
+        MLUT (``"direct transmission (dev)"``), so the direct horizontal
+        irradiance is reconstructed as ``mu_s * T_direct`` with
+        ``mu_s = cos(SZA)`` (SZA from ``le["th_deg"]``).
+
+        The solar constant is taken as 1 (SMART-G's dimensionless convention);
+        if the diffuse flux uses a different normalisation (e.g. a factor of
+        ``pi``), apply the matching factor here after checking one run.
+        """
+        if not isinstance(self.le, dict) or "th_deg" not in self.le:
+            raise ValueError(
+                "direct flux needs a solar direction: le must hold 'th_deg'."
+            )
+        t_direct = np.asarray(
+            mlut["direct transmission (dev)"][:], dtype=float
+        ).reshape(-1)
+        mu_s = float(np.cos(np.deg2rad(self.le["th_deg"])))
+        return mu_s * t_direct
 
 
 @dataclass
