@@ -13,6 +13,7 @@ once and reused for every ``kext``.
 
 import matplotlib.pyplot as plt
 from smartg.smartg import Albedo_cst, LambSurface, Smartg
+from smartg.truncation import GT_trunc
 
 from smart_ace.atmosphere import AtmoParams, Atmosphere, CloudOptics
 from smart_ace.geometry import Box, Domain, Geometry
@@ -23,21 +24,27 @@ def main() -> None:
     wl = 560.0
 
     domain = Domain(dx=30, dy=30, dz=100, zmin=0)
-    layout = Transect(res=0.2, axis="x", n=100)  # 100 sensors, x in [-10, 10] km
+    layout = Transect(res=0.2001, axis="x", n=100)  # 100 sensors, x in [-10, 10] km
 
     # Same 5x5 km cloud slab at [1.0, 1.5] km for every case; only kext varies
     # (kext=0 is the clear-sky reference).
     cloud = Box(dx=5.0, dy=5.0, dz=0.5, zmin=1.0)
     geo = Geometry.build(cloud_shape=cloud, domain=domain)
 
-    kexts = [0.0, 0.2, 1.0, 2.0, 20.0]  # km^-1
+    kexts = [1e-8, 0.2, 1.0, 2.0, 5.0, 10.0, 20.0, 40.0, 100.0]  # km^-1
+    trunc = GT_trunc(
+        trunc_frac=0.435,
+        theta_tol=20,
+        integral_method="lobatto",
+        lobatto_optimization=True,
+    )
 
     # One Observable per kext, gathered in a Study.
     study = Study()
     for kext in kexts:
         atm = Atmosphere(
             geo,
-            CloudOptics(kext=kext, reff=10.0),
+            CloudOptics(kext=kext, reff=10.0, trunc=trunc),
             AtmoParams(wl=wl, nth=2000),
         )
         study.add_observable(
@@ -47,7 +54,7 @@ def main() -> None:
                 layout=layout,
                 sensor=SensorParams(quantity="flux", loc="0+"),
                 surf=LambSurface(ALB=Albedo_cst(0.2)),
-                le={"th_deg": 0.0, "phi_deg": 0.0},  # zenith sun
+                le={"th_deg": 60.0, "phi_deg": 0.0},  # zenith sun
                 NBPHOTONS=1e8,
             ),
         )

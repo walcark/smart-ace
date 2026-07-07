@@ -18,6 +18,7 @@ proper clear-sky support (no cloud voxel at all) is still a library TODO.
 
 import matplotlib.pyplot as plt
 from smartg.smartg import Albedo_cst, LambSurface, Smartg
+from smartg.truncation import GT_trunc
 
 from smart_ace.atmosphere import AtmoParams, Atmosphere, CloudOptics
 from smart_ace.geometry import Box, Domain, Geometry
@@ -32,8 +33,14 @@ def main() -> None:
 
     # Optically thick cloud slab at [1.0, 1.5] km (tau = 20 * 0.5 = 10);
     # the "no cloud" baseline uses a transparent Box (kext ~ 0 ~ clear sky).
-    thick = CloudOptics(kext=20.0, reff=10.0)
-    clear = CloudOptics(kext=1e-8, reff=10.0)
+    trunc = GT_trunc(
+        trunc_frac=0.435,
+        theta_tol=20,
+        integral_method="lobatto",
+        lobatto_optimization=True,
+    )
+    thick = CloudOptics(kext=2.0, reff=30.0, trunc=trunc)
+    clear = CloudOptics(kext=1e-8, reff=30.0, trunc=trunc)
 
     cases = [
         ("no cloud", Box(dx=1.0, dy=1.0, dz=0.5, zmin=1.0), clear),
