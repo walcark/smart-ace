@@ -31,7 +31,7 @@ def main() -> None:
     cloud = Box(dx=5.0, dy=5.0, dz=0.5, zmin=1.0)
     geo = Geometry.build(cloud_shape=cloud, domain=domain)
 
-    kexts = [1e-8, 0.2, 1.0, 2.0, 5.0, 10.0, 20.0, 40.0, 100.0]  # km^-1
+    kexts = [1e-8, 0.2, 1.0, 2.0, 5.0, 10.0]  # km^-1
     trunc = GT_trunc(
         trunc_frac=0.435,
         theta_tol=20,
@@ -55,7 +55,8 @@ def main() -> None:
                 sensor=SensorParams(quantity="flux", loc="0+"),
                 surf=LambSurface(ALB=Albedo_cst(0.2)),
                 le={"th_deg": 60.0, "phi_deg": 0.0},  # zenith sun
-                NBPHOTONS=1e8,
+                NBPHOTONS=1e8, 
+                direct=True
             ),
         )
 

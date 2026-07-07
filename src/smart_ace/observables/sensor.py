@@ -79,4 +79,4 @@ class SensorParams(BaseModel):
 
     def zpos(self, geo: "Geometry") -> float:
         """Vertical position [km]: just below TOA for toa, 0 for ``'0+'``."""
-        return float(geo.zgrid.max() - 1.0) if self.loc == "toa" else 0.0
+        return float(geo.zgrid.max() - 1.0) if self.loc == "toa" else 0.001
