@@ -9,16 +9,20 @@ only when actually running or plotting.
 """
 
 from .layout import Layout, Map, Transect, positions
-from .observable import Observable, Result, build_sensors
+from .observable import Observable, Result, Results, Study, build_sensors
 from .plot import plot_result
+from .sensor import SensorParams
 
 __all__ = [
     "Layout",
     "Map",
     "Transect",
     "positions",
+    "SensorParams",
     "Observable",
     "Result",
+    "Results",
+    "Study",
     "build_sensors",
     "plot_result",
 ]

@@ -11,8 +11,8 @@ stays light and does not require a GPU.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -20,28 +20,27 @@ from smart_ace.atmosphere import Atmosphere
 from smart_ace.atmosphere.build import build_grid3d
 
 from .layout import Layout, Transect, positions
+from .sensor import SensorParams
 
 if TYPE_CHECKING:
     from smartg.smartg import Sensor
 
     from smart_ace import Geometry
 
-SensorType = Literal["sat", "ground"]
-
 
 def build_sensors(
     geo: "Geometry",
-    sensor_type: SensorType,
+    sensor: SensorParams,
     layout: Layout,
-    THDEG: float | None = None,
-    PHDEG: float | None = None,
 ) -> tuple[list["Sensor"], tuple[int, ...]]:
     """Build the list of SMART-G sensors and return the sampling grid shape.
 
-    Sensor positions come from :func:`positions` (cell-centred, so they never
-    fall on a voxel face). Each sensor gets the ``ICELL`` of the voxel it sits
-    in, computed against the *with-boundary* grid ``grid3.xGRID/yGRID/zGRID`` —
-    the only grid whose cell numbering matches the SMART-G engine.
+    Horizontal positions come from :func:`positions` (cell-centred, so they
+    never fall on a voxel face); the vertical position, viewing direction and
+    ``TYPE``/``FOV`` come from ``sensor`` (:class:`SensorParams`). Each sensor
+    gets the ``ICELL`` of the voxel it sits in, computed against the
+    *with-boundary* grid ``grid3.xGRID/yGRID/zGRID`` — the only grid whose cell
+    numbering matches the SMART-G engine.
     """
     from smartg.libATM3D import locate_3Dregular_cells
     from smartg.smartg import Sensor
@@ -50,12 +49,8 @@ def build_sensors(
     shape = xx.shape
     xx, yy = xx.flatten(), yy.flatten()
 
-    if sensor_type == "sat":
-        zz = np.full(xx.size, geo.zgrid.max() - 1.0)
-    elif sensor_type == "ground":
-        zz = np.full(xx.size, 0.0)
-    else:
-        raise ValueError(f"Wrong sensor type: {sensor_type}")
+    z = sensor.zpos(geo)
+    zz = np.full(xx.size, z)
 
     grid3 = build_grid3d(geo, toa_alt=geo.zgrid.max() + 1.0)
 
@@ -72,9 +67,11 @@ def build_sensors(
         Sensor(
             POSX=float(px),
             POSY=float(py),
-            POSZ=float(zz[0]),
-            THDEG=THDEG,
-            PHDEG=PHDEG,
+            POSZ=z,
+            THDEG=sensor.theta,
+            PHDEG=sensor.phdeg,
+            TYPE=sensor.TYPE,
+            FOV=sensor.FOV,
             ICELL=int(ic),
             LOC="ATMOS",
         )
@@ -120,7 +117,12 @@ class Result:
 
 @dataclass
 class Observable:
-    """An atmosphere sampled by a sensor layout, ready to be run with SMART-G.
+    """A fully declarative SMART-G measurement, ready to be run.
+
+    An ``Observable`` holds *everything* needed to compute itself: the
+    atmosphere, the sensor layout and viewing geometry, and the run parameters
+    (surface, local estimate, photon budget). ``run`` therefore takes only the
+    SMART-G engine.
 
     Parameters
     ----------
@@ -128,65 +130,53 @@ class Observable:
         The :class:`Atmosphere` (cloud geometry + optics + 1D background).
     layout:
         The horizontal sensor arrangement (:class:`Map` or :class:`Transect`).
-    sensor_type:
-        ``"sat"`` (near TOA, looking down) or ``"ground"`` (at the surface).
-    THDEG, PHDEG:
-        Viewing zenith / azimuth of the sensors [deg]. Default nadir satellite.
-    quantity:
-        The SMART-G output quantity to extract from the run.
+    sensor:
+        The :class:`SensorParams` (measured quantity, location, direction).
+    surf:
+        Surface object passed to ``S.run`` (e.g. a ``LambSurface``).
+    le:
+        Local-estimate (solar) direction, ``{"th_deg": 0., "phi_deg": 0.}``.
+    NBPHOTONS:
+        Number of photons for the run.
     """
 
     atmosphere: Atmosphere
     layout: Layout
-    sensor_type: SensorType = "sat"
-    THDEG: float = 180.0
-    PHDEG: float = 0.0
-    quantity: str = "I_up (TOA)"
+    sensor: SensorParams = field(default_factory=SensorParams)
+    surf: Any = None
+    le: Any = None
+    NBPHOTONS: float = 1e7
 
-    def run(
-        self,
-        S: Any,
-        *,
-        surf: Any,
-        le: Any,
-        NBPHOTONS: float,
-    ) -> Result:
+    def run(self, S: Any) -> Result:
         """Place the sensors, run SMART-G and pack the output into a Result.
 
         Parameters
         ----------
         S:
             A configured :class:`smartg.smartg.Smartg` instance.
-        surf:
-            Surface object passed to ``S.run`` (e.g. a ``LambSurface``).
-        le:
-            Local-estimate direction, e.g. ``{"th_deg": 0., "phi_deg": 0.}``.
-        NBPHOTONS:
-            Number of photons for the run.
         """
         geo = self.atmosphere.geometry
         wl = self.atmosphere.atmo.wl
+        quantity = self.sensor.output_key
 
-        sensors, shape = build_sensors(
-            geo, self.sensor_type, self.layout, self.THDEG, self.PHDEG
-        )
+        sensors, shape = build_sensors(geo, self.sensor, self.layout)
 
         mlut = S.run(
             wl=wl,
             atm=self.atmosphere.build(),
-            surf=surf,
+            surf=self.surf,
             sensor=sensors,
-            le=le,
-            NBPHOTONS=NBPHOTONS,
+            le=self.le,
+            NBPHOTONS=self.NBPHOTONS,
         )
 
-        arr = np.asarray(mlut[self.quantity][:, 0, 0], dtype=float)
+        arr = np.asarray(mlut[quantity][:, 0, 0], dtype=float)
         xx, yy = positions(self.layout)
 
         if isinstance(self.layout, Transect):
             coord = (xx if self.layout.axis == "x" else yy).flatten()
             return Result(
-                self.quantity,
+                quantity,
                 arr,
                 (coord,),
                 is_map=False,
@@ -194,4 +184,50 @@ class Observable:
             )
 
         values = arr.reshape(shape)
-        return Result(self.quantity, values, (xx[0, :], yy[:, 0]), is_map=True)
+        return Result(quantity, values, (xx[0, :], yy[:, 0]), is_map=True)
+
+
+@dataclass
+class Results:
+    """Name-addressable collection of :class:`Result` objects.
+
+    Returned by :meth:`Study.run`. Deliberately minimal: it only maps a name
+    to its :class:`Result` and delegates everything else (plotting in
+    particular) to :class:`Result` itself.
+    """
+
+    results: dict[str, Result] = field(default_factory=dict)
+
+    def get(self, name: str) -> Result:
+        """Return the :class:`Result` registered under ``name``."""
+        if name not in self.results:
+            raise KeyError(
+                f"No result named {name!r}. Available: {list(self.results)}"
+            )
+        return self.results[name]
+
+
+@dataclass
+class Study:
+    """An explicit, named registry of observables run together.
+
+    Add observables under a name, then :meth:`run` computes each one (one
+    SMART-G run per observable, reusing :meth:`Observable.run`) and returns a
+    :class:`Results` mapping. Being an ordinary object rather than a global
+    registry, a ``Study`` is notebook-safe and reproducible: what runs is
+    exactly what was added to *this* instance.
+    """
+
+    _observables: dict[str, Observable] = field(default_factory=dict)
+
+    def add_observable(self, name: str, observable: Observable) -> None:
+        """Register ``observable`` under ``name`` (must be unique)."""
+        if name in self._observables:
+            raise ValueError(f"An observable named {name!r} already exists.")
+        self._observables[name] = observable
+
+    def run(self, S: Any) -> Results:
+        """Run every registered observable and collect the results by name."""
+        return Results(
+            {name: obs.run(S) for name, obs in self._observables.items()}
+        )

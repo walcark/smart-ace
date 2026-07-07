@@ -11,7 +11,12 @@ from smartg.smartg import Albedo_cst, LambSurface, Smartg
 
 from smart_ace.atmosphere import AtmoParams, Atmosphere, CloudOptics
 from smart_ace.geometry import Domain, Geometry, Spheroid
-from smart_ace.observables import Map, Observable, Transect  # noqa: F401
+from smart_ace.observables import (  # noqa: F401
+    Map,
+    Observable,
+    SensorParams,
+    Transect,
+)
 
 
 def main() -> None:
@@ -32,19 +37,15 @@ def main() -> None:
     obs = Observable(
         atmosphere=atm,
         layout=Map(res=0.5, n=20),  # ou Transect(res=0.5, axis="x", n=40)
-        sensor_type="sat",
-        THDEG=180.0,
-        PHDEG=0.0,
-    )
-
-    S = Smartg(opt3D=True, back=True, double=True, bias=True)
-
-    result = obs.run(
-        S,
+        sensor=SensorParams(quantity="radiance", loc="toa"),
         surf=LambSurface(ALB=Albedo_cst(0.2)),
         le={"th_deg": 0.0, "phi_deg": 0.0},  # direction solaire (local estimate)
         NBPHOTONS=1e8,
     )
+
+    S = Smartg(opt3D=True, back=True, double=True, bias=True)
+
+    result = obs.run(S)  # tout est déjà dans l'Observable
 
     result.plot()
     plt.show()
